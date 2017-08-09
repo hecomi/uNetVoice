@@ -9,9 +9,6 @@ namespace uNetVoice
 public class TestNetworkController : MonoBehaviour
 {
     [SerializeField]
-    uNetVoice uNetVoice;
-
-    [SerializeField]
     InputField address;
 
     [SerializeField]
@@ -20,6 +17,7 @@ public class TestNetworkController : MonoBehaviour
     [SerializeField]
     int maxConnections = 10;
 
+    uNetVoice uNetVoice_;
     bool isHost_ = false;
     bool hasStarted_ = false;
 
@@ -27,7 +25,7 @@ public class TestNetworkController : MonoBehaviour
     {
         if (hasStarted_) return;
 
-        var manager = GetComponent<NetworkManager>();
+        var manager = FindObjectOfType<NetworkManager>();
         manager.networkAddress = address.text;
         manager.networkPort = int.Parse(port.text);
         manager.maxConnections = maxConnections;
@@ -41,7 +39,8 @@ public class TestNetworkController : MonoBehaviour
             manager.StartClient();
         }
 
-        uNetVoice.StartVoice();
+        uNetVoice_ = FindObjectOfType<uNetVoice>();
+        uNetVoice_.StartVoice();
 
         isHost_ = isHost;
         hasStarted_ = true;
@@ -61,7 +60,7 @@ public class TestNetworkController : MonoBehaviour
     {
         if (!hasStarted_) return;
 
-        uNetVoice.StopVoice();
+        uNetVoice_.StopVoice();
 
         var manager = GetComponent<NetworkManager>();
         if (isHost_)

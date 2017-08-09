@@ -8,8 +8,8 @@ namespace uNetVoice
 [RequireComponent(typeof(AudioSource))]
 public class VoicePlayer : MonoBehaviour
 {
-    Dictionary<NetworkConnection, Queue<VoiceMessage>> voiceQueues_ 
-        = new Dictionary<NetworkConnection, Queue<VoiceMessage>>();
+    Dictionary<NetworkConnection, Queue<VoiceData>> voiceQueues_ 
+        = new Dictionary<NetworkConnection, Queue<VoiceData>>();
 
     public int maxQueueNumber = 10;
 
@@ -21,14 +21,14 @@ public class VoicePlayer : MonoBehaviour
         source.Play();
     }
 
-    public void Add(NetworkConnection conn, VoiceMessage voice)
+    public void Add(NetworkConnection conn, VoiceData voice)
     {
-        Queue<VoiceMessage> queue = null;
+        Queue<VoiceData> queue = null;
         voiceQueues_.TryGetValue(conn, out queue);
 
         if (queue == null)
         {
-            queue = new Queue<VoiceMessage>();
+            queue = new Queue<VoiceData>();
             voiceQueues_.Add(conn, queue);
         }
 
@@ -52,7 +52,9 @@ public class VoicePlayer : MonoBehaviour
             var voice = queue.Dequeue();
             if (voice.data.Length != data.Length || voice.channels != channels)
             {
-                Debug.LogWarningFormat("voice data from {0} does not match to the local audio player.", conn.address);
+                Debug.LogWarningFormat(
+                    "the queued voice data ({0}:{1}-ch) format is incompatible with audio player ({2}:{3}-ch).",
+                    voice.data.Length, voice.channels, data.Length, channels);
                 continue;
             }
 

@@ -19,7 +19,7 @@ public class VoiceRecorder : MonoBehaviour
     int maxFreq_ = 0;
 
     public class AudioFilterReadEvent : UnityEvent<float[], int> {}
-    public AudioFilterReadEvent onAudioFilterRead = new AudioFilterReadEvent();
+    public AudioFilterReadEvent onVoiceRead = new AudioFilterReadEvent();
 
     public bool isReady 
     {
@@ -120,7 +120,7 @@ public class VoiceRecorder : MonoBehaviour
     {
         sampleCount_ = data.Length;
         channels_ = channels;
-        onAudioFilterRead.Invoke(data, channels);
+        onVoiceRead.Invoke(data, channels);
         System.Array.Clear(data, 0, sampleCount_);
     }
 }

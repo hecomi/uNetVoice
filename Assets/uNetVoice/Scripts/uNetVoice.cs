@@ -6,14 +6,17 @@ namespace uNetVoice
 
 public class uNetVoice : MonoBehaviour
 {
-    GameObject recorderObject_;
-    VoiceRecorder recorder_;
-    GameObject playerObject_;
-    VoicePlayer player_;
-    bool hasStarted_ = false;
-
     [SerializeField]
     NetworkManager networkManager;
+
+    [SerializeField]
+    VoiceRecorder recorder;
+
+    [SerializeField]
+    VoicePlayer player;
+
+    [SerializeField]
+    int micIndex = 0;
 
     [SerializeField]
     int channelId = 0;
@@ -23,6 +26,8 @@ public class uNetVoice : MonoBehaviour
 
     [SerializeField]
     int maxQueueNumber = 10;
+
+    bool hasStarted_ = false;
 
     NetworkClient client
     {
@@ -34,24 +39,11 @@ public class uNetVoice : MonoBehaviour
         get { return NetworkServer.connections.Count > 0; }
     }
 
-    public void StartVoice()
+    void Awake()
     {
-        if (hasStarted_) return;
-        hasStarted_ = true;
-
-        StartRecorder();
-        StartPlayer();
-        StartNetwork();
-    }
-
-    public void StopVoice()
-    {
-        if (!hasStarted_) return;
-        hasStarted_ = false;
-
-        StopNetwork();
-        StopPlayer();
-        StopRecorder();
+        InitManager();
+        InitRecorder();
+        InitPlayer();
     }
 
     void OnDestroy()
@@ -61,89 +53,117 @@ public class uNetVoice : MonoBehaviour
 
     void Update()
     {
-        if (player_)
+        if (player)
         {
-            player_.maxQueueNumber = maxQueueNumber;
+            player.maxQueueNumber = maxQueueNumber;
+        }
+    }
+
+    public void StartVoice()
+    {
+        if (hasStarted_) return;
+        hasStarted_ = true;
+
+        StartRecorder();
+        StartNetwork();
+    }
+
+    public void StopVoice()
+    {
+        if (!hasStarted_) return;
+        hasStarted_ = false;
+
+        StopNetwork();
+        StopRecorder();
+    }
+
+    void InitManager()
+    {
+        if (networkManager == null)
+        {
+            networkManager = FindObjectOfType<NetworkManager>();
+        }
+    }
+
+    void InitRecorder()
+    {
+        if (recorder == null)
+        {
+            var go = new GameObject("Recorder");
+            go.transform.SetParent(transform);
+            recorder = go.AddComponent<VoiceRecorder>();
+        }
+        recorder.Initialize(micIndex);
+    }
+
+    void InitPlayer()
+    {
+        if (player == null)
+        {
+            var go = new GameObject("Player");
+            go.transform.SetParent(transform);
+            player = go.AddComponent<VoicePlayer>();
         }
     }
 
     void StartRecorder()
     {
-        recorderObject_ = new GameObject("Recorder");
-        recorderObject_.transform.SetParent(transform);
-
-        recorder_ = recorderObject_.AddComponent<VoiceRecorder>();
-        recorder_.Initialize();
-        recorder_.Record();
-        recorder_.onAudioFilterRead.AddListener(SendVoice);
+        recorder.onVoiceRead.AddListener(SendVoice);
+        recorder.Record();
     }
 
     void StopRecorder()
     {
-        recorder_.onAudioFilterRead.RemoveListener(SendVoice);
-        recorder_.Stop();
-        Destroy(recorderObject_);
-    }
-
-    void StartPlayer()
-    {
-        playerObject_ = new GameObject("Player");
-        playerObject_.transform.SetParent(transform);
-
-        player_ = playerObject_.AddComponent<VoicePlayer>();
-    }
-
-    void StopPlayer()
-    {
-        Destroy(playerObject_);
+        recorder.onVoiceRead.RemoveListener(SendVoice);
+        recorder.Stop();
     }
 
     void StartNetwork()
     {
         if (isHost)
         {
-            NetworkServer.RegisterHandler(VoiceMessage.Type, OnServerVoiceReceived);
+            NetworkServer.RegisterHandler(VoiceMessage.ClientToHost, OnVoiceReceivedFromClient);
         }
-        client.RegisterHandler(VoiceMessage.Type, OnClientVoiceReceived);
+        client.RegisterHandler(VoiceMessage.HostToClient, OnVoiceReceivedFromHost);
     }
 
     void StopNetwork()
     {
         if (isHost)
         {
-            NetworkServer.UnregisterHandler(VoiceMessage.Type);
+            NetworkServer.UnregisterHandler(VoiceMessage.ClientToHost);
         }
-        client.UnregisterHandler(VoiceMessage.Type);
+        client.UnregisterHandler(VoiceMessage.HostToClient);
     }
 
     void SendVoice(float[] data, int channels)
     {
-        if (client.isConnected)
+        if (!client.isConnected) return;
+
+        var voice = new VoiceData()
         {
-            var voice = new VoiceMessage()
-            {
-                data = data, 
-                channels = channels 
-            };
-            client.SendByChannel(VoiceMessage.Type, voice, channelId);
-        }
+            data = data, 
+            channels = channels 
+        };
+        client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
     }
 
-    void OnServerVoiceReceived(NetworkMessage msg)
+    void OnVoiceReceivedFromClient(NetworkMessage msg)
     {
         foreach (var conn in NetworkServer.connections)
         {
-            if (!playSelfSound && conn == msg.conn) continue;
+            bool isSelf = conn == msg.conn;
+            if (!playSelfSound && isSelf) continue;
 
-            var voice = msg.ReadMessage<VoiceMessage>();
-            conn.SendByChannel(VoiceMessage.Type, voice, channelId);
+            var voice = msg.ReadMessage<VoiceData>();
+            conn.SendByChannel(VoiceMessage.HostToClient, voice, channelId);
         }
     }
 
-    void OnClientVoiceReceived(NetworkMessage msg)
+    void OnVoiceReceivedFromHost(NetworkMessage msg)
     {
-        var voice = msg.ReadMessage<VoiceMessage>();
-        player_.Add(msg.conn, voice);
+        var voice = msg.ReadMessage<VoiceData>();
+        player.Add(msg.conn, voice);
     }
 }
 

@@ -4,12 +4,10 @@ using UnityEngine.Networking;
 namespace uNetVoice
 {
 
-public class VoiceMessage : MessageBase
+public static class VoiceMessage
 {
-    public static readonly short Type = MsgType.Highest + 1;
-
-    public float[] data;
-    public int channels;
+    public const short ClientToHost = MsgType.Highest + 1;
+    public const short HostToClient = MsgType.Highest + 2;
 }
 
 }
