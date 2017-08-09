@@ -11,44 +11,17 @@ public class VoiceRecorder : MonoBehaviour
     string micName_ = null;
 
     bool initialized_ = false;
-    bool recording_   = false;
+    bool recording_ = false;
 
-    int sampleCount_ = 0;
-    int channels_ = 0;
     int minFreq_ = 0;
     int maxFreq_ = 0;
+    float[] tmpBuffer_ = null;
 
-    public class AudioFilterReadEvent : UnityEvent<float[], int> {}
-    public AudioFilterReadEvent onVoiceRead = new AudioFilterReadEvent();
+    VoiceBuffer buffer_ = new VoiceBuffer();
 
-    public bool isReady 
-    {
-        get { return initialized_; }
-    }
-
-    public bool isRecording 
+    public bool isRecording
     {
         get { return recording_; }
-    }
-
-    public int sampleCount
-    {
-        get { return sampleCount_; }
-    }
-
-    public int channels
-    {
-        get { return channels_; }
-    }
-
-    public int frequency
-    {
-        get { return maxFreq_; }
-    }
-
-    public AudioClip clip 
-    {
-        get { return source_.clip; }
     }
 
     void Awake()
@@ -85,7 +58,13 @@ public class VoiceRecorder : MonoBehaviour
         {
             micIndex = maxIndex;
         }
+
         micName_ = Microphone.devices[micIndex];
+        if (micName_.Length == 0)
+        {
+            micName_ = "Default Mic";
+        }
+
         Debug.Log("Use mic: " + micName_);
 
         Microphone.GetDeviceCaps(micName_, out minFreq_, out maxFreq_);
@@ -97,7 +76,7 @@ public class VoiceRecorder : MonoBehaviour
         initialized_ = true;
     }
 
-    public void Record()
+    public void StartRecord()
     {
         if (!initialized_) 
         {
@@ -108,7 +87,7 @@ public class VoiceRecorder : MonoBehaviour
         recording_ = true;
     }
 
-    public void Stop()
+    public void StopRecord()
     {
         source_.Stop();
         Destroy(source_.clip);
@@ -116,12 +95,28 @@ public class VoiceRecorder : MonoBehaviour
         recording_ = false;
     }
 
+    public int GetRecordedData(ref float[] buf)
+    {
+        return buffer_.Get(ref buf, buf.Length);
+    }
+
     void OnAudioFilterRead(float[] data, int channels)
     {
-        sampleCount_ = data.Length;
-        channels_ = channels;
-        onVoiceRead.Invoke(data, channels);
-        System.Array.Clear(data, 0, sampleCount_);
+        // make voice data monoral
+        int n = data.Length / channels;
+        if (tmpBuffer_ == null)
+        {
+            tmpBuffer_ = new float[n];
+        }
+        for (int i = 0; i < n; ++i)
+        {
+            tmpBuffer_[i] = data[channels * i];
+        }
+
+        buffer_.Add(tmpBuffer_);
+
+        // make mic sound silent
+        System.Array.Clear(data, 0, data.Length);
     }
 }
 

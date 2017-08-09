@@ -1,11 +1,14 @@
 ﻿using UnityEngine;
 using UnityEngine.Networking;
+using System.Collections.Generic;
 
 namespace uNetVoice
 {
 
 public class uNetVoice : MonoBehaviour
 {
+    const int ChunkSize = 1024;
+
     [SerializeField]
     NetworkManager networkManager;
 
@@ -24,9 +27,8 @@ public class uNetVoice : MonoBehaviour
     [SerializeField]
     bool playSelfSound = false;
 
-    [SerializeField]
-    int maxQueueNumber = 10;
-
+    Queue<KeyValuePair<NetworkConnection, VoiceData>> messageQueue_ = new Queue<KeyValuePair<NetworkConnection, VoiceData>>();
+    float[] buffer_ = new float[ChunkSize];
     bool hasStarted_ = false;
 
     NetworkClient client
@@ -53,9 +55,21 @@ public class uNetVoice : MonoBehaviour
 
     void Update()
     {
-        if (player)
+        if (recorder && recorder.isRecording)
         {
-            player.maxQueueNumber = maxQueueNumber;
+            if (recorder.GetRecordedData(ref buffer_) > 0)
+            {
+                var voice = new VoiceData() { data = buffer_ };
+                client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
+            }
+        }
+
+        while (messageQueue_.Count > 0)
+        {
+            var kv = messageQueue_.Dequeue();
+            var conn = kv.Key;
+            var voice = kv.Value;
+            player.Add(conn, voice);
         }
     }
 
@@ -108,14 +122,12 @@ public class uNetVoice : MonoBehaviour
 
     void StartRecorder()
     {
-        recorder.onVoiceRead.AddListener(SendVoice);
-        recorder.Record();
+        recorder.StartRecord();
     }
 
     void StopRecorder()
     {
-        recorder.onVoiceRead.RemoveListener(SendVoice);
-        recorder.Stop();
+        recorder.StopRecord();
     }
 
     void StartNetwork()
@@ -136,18 +148,6 @@ public class uNetVoice : MonoBehaviour
         client.UnregisterHandler(VoiceMessage.HostToClient);
     }
 
-    void SendVoice(float[] data, int channels)
-    {
-        if (!client.isConnected) return;
-
-        var voice = new VoiceData()
-        {
-            data = data, 
-            channels = channels 
-        };
-        client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
-    }
-
     void OnVoiceReceivedFromClient(NetworkMessage msg)
     {
         foreach (var conn in NetworkServer.connections)
@@ -162,8 +162,10 @@ public class uNetVoice : MonoBehaviour
 
     void OnVoiceReceivedFromHost(NetworkMessage msg)
     {
+        var conn = msg.conn;
         var voice = msg.ReadMessage<VoiceData>();
-        player.Add(msg.conn, voice);
+        var data = new KeyValuePair<NetworkConnection, VoiceData>(conn, voice);
+        messageQueue_.Enqueue(data);
     }
 }
 

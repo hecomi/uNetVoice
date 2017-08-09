@@ -8,10 +8,10 @@ namespace uNetVoice
 [RequireComponent(typeof(AudioSource))]
 public class VoicePlayer : MonoBehaviour
 {
-    Dictionary<NetworkConnection, Queue<VoiceData>> voiceQueues_ 
-        = new Dictionary<NetworkConnection, Queue<VoiceData>>();
+    Dictionary<NetworkConnection, VoiceBuffer> buffers_ 
+        = new Dictionary<NetworkConnection, VoiceBuffer>();
 
-    public int maxQueueNumber = 10;
+    float[] tmpBuffer_ = null;
 
     void Awake()
     {
@@ -23,44 +23,40 @@ public class VoicePlayer : MonoBehaviour
 
     public void Add(NetworkConnection conn, VoiceData voice)
     {
-        Queue<VoiceData> queue = null;
-        voiceQueues_.TryGetValue(conn, out queue);
+        VoiceBuffer buffer = null;
+        buffers_.TryGetValue(conn, out buffer);
 
-        if (queue == null)
+        if (buffer == null)
         {
-            queue = new Queue<VoiceData>();
-            voiceQueues_.Add(conn, queue);
+            buffer = new VoiceBuffer();
+            buffers_.Add(conn, buffer);
         }
 
-        queue.Enqueue(voice);
-
-        while (queue.Count > maxQueueNumber)
-        {
-            queue.Dequeue();
-        }
+        buffer.Add(voice.data);
     }
 
     void OnAudioFilterRead(float[] data, int channels)
     {
-        foreach (var kv in voiceQueues_)
+        foreach (var kv in buffers_)
         {
             var conn = kv.Key;
-            var queue = kv.Value;
+            var buffer = kv.Value;
 
-            if (queue.Count == 0) continue;
-
-            var voice = queue.Dequeue();
-            if (voice.data.Length != data.Length || voice.channels != channels)
+            if (tmpBuffer_ == null)
             {
-                Debug.LogWarningFormat(
-                    "the queued voice data ({0}:{1}-ch) format is incompatible with audio player ({2}:{3}-ch).",
-                    voice.data.Length, voice.channels, data.Length, channels);
-                continue;
+                tmpBuffer_ = new float[data.Length / channels];
             }
 
-            for (int i = 0; i < data.Length; ++i)
+            if (buffer.Get(ref tmpBuffer_, tmpBuffer_.Length) == 0) continue;
+
+            var n = tmpBuffer_.Length;
+            for (int i = 0; i < n; ++i)
             {
-                data[i] += voice.data[i];
+                for (int c = 0; c < channels; ++c)
+                {
+                    var j = channels * i + c;
+                    data[j] += tmpBuffer_[i];
+                }
             }
         }
     }

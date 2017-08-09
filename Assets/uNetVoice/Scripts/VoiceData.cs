@@ -7,7 +7,6 @@ namespace uNetVoice
 public class VoiceData : MessageBase
 {
     public float[] data;
-    public int channels;
 }
 
 }

@@ -1345,7 +1345,7 @@ Prefab:
     - target: {fileID: 114290158346662432, guid: ab29f2395853c4ee8bb2813154bbdaf5,
         type: 2}
       propertyPath: playSelfSound
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_ParentPrefab: {fileID: 100100000, guid: ab29f2395853c4ee8bb2813154bbdaf5, type: 2}
