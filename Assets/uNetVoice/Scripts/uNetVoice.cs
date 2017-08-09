@@ -7,7 +7,7 @@ namespace uNetVoice
 
 public class uNetVoice : MonoBehaviour
 {
-    const int ChunkSize = 1024;
+    const int ChunkSize = 256;
 
     [SerializeField]
     NetworkManager networkManager;
@@ -27,7 +27,6 @@ public class uNetVoice : MonoBehaviour
     [SerializeField]
     bool playSelfSound = false;
 
-    Queue<KeyValuePair<NetworkConnection, VoiceData>> messageQueue_ = new Queue<KeyValuePair<NetworkConnection, VoiceData>>();
     float[] buffer_ = new float[ChunkSize];
     bool hasStarted_ = false;
 
@@ -57,19 +56,11 @@ public class uNetVoice : MonoBehaviour
     {
         if (recorder && recorder.isRecording)
         {
-            if (recorder.GetRecordedData(ref buffer_) > 0)
+            while (recorder.GetRecordedData(ref buffer_) > 0)
             {
                 var voice = new VoiceData() { data = buffer_ };
                 client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
             }
-        }
-
-        while (messageQueue_.Count > 0)
-        {
-            var kv = messageQueue_.Dequeue();
-            var conn = kv.Key;
-            var voice = kv.Value;
-            player.Add(conn, voice);
         }
     }
 
@@ -164,8 +155,7 @@ public class uNetVoice : MonoBehaviour
     {
         var conn = msg.conn;
         var voice = msg.ReadMessage<VoiceData>();
-        var data = new KeyValuePair<NetworkConnection, VoiceData>(conn, voice);
-        messageQueue_.Enqueue(data);
+        player.Add(conn, voice);
     }
 }
 
