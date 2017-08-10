@@ -48,7 +48,7 @@ public class uNetVoice : MonoBehaviour
 
     void OnDestroy()
     {
-        StopVoice();
+        StopVoiceChat();
     }
 
     void Update()
@@ -68,7 +68,7 @@ public class uNetVoice : MonoBehaviour
         }
     }
 
-    public void StartVoice()
+    public void StartVoiceChat()
     {
         if (hasStarted_) return;
         hasStarted_ = true;
@@ -77,7 +77,7 @@ public class uNetVoice : MonoBehaviour
         StartNetwork();
     }
 
-    public void StopVoice()
+    public void StopVoiceChat()
     {
         if (!hasStarted_) return;
         hasStarted_ = false;
@@ -131,7 +131,11 @@ public class uNetVoice : MonoBehaviour
         {
             NetworkServer.RegisterHandler(VoiceMessage.ClientToHost, OnVoiceReceivedFromClient);
         }
-        client.RegisterHandler(VoiceMessage.HostToClient, OnVoiceReceivedFromHost);
+
+        if (client != null)
+        {
+            client.RegisterHandler(VoiceMessage.HostToClient, OnVoiceReceivedFromHost);
+        }
     }
 
     void StopNetwork()
@@ -140,7 +144,11 @@ public class uNetVoice : MonoBehaviour
         {
             NetworkServer.UnregisterHandler(VoiceMessage.ClientToHost);
         }
-        client.UnregisterHandler(VoiceMessage.HostToClient);
+
+        if (client != null)
+        { 
+            client.UnregisterHandler(VoiceMessage.HostToClient);
+        }
     }
 
     void OnVoiceReceivedFromClient(NetworkMessage msg)
@@ -152,6 +160,8 @@ public class uNetVoice : MonoBehaviour
 
             var voice = msg.ReadMessage<VoiceData>();
             conn.SendByChannel(VoiceMessage.HostToClient, voice, channelId);
+
+            Debug.Log(conn.address);
         }
     }
 

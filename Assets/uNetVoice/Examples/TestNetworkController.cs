@@ -21,9 +21,14 @@ public class TestNetworkController : MonoBehaviour
     bool isHost_ = false;
     bool hasStarted_ = false;
 
-    void StartManager(bool isHost)
+    void OnDestroy()
     {
-        if (hasStarted_) return;
+        Stop();
+    }
+
+    bool StartManager(bool isHost)
+    {
+        if (hasStarted_) return false;
 
         var manager = FindObjectOfType<NetworkManager>();
         manager.networkAddress = address.text;
@@ -40,27 +45,35 @@ public class TestNetworkController : MonoBehaviour
         }
 
         uNetVoice_ = FindObjectOfType<uNetVoice>();
-        uNetVoice_.StartVoice();
+        uNetVoice_.StartVoiceChat();
 
         isHost_ = isHost;
         hasStarted_ = true;
+
+        return true;
     }
 
     public void StartHost()
     {
-        StartManager(true);
+        if (StartManager(true))
+        {
+            Debug.Log("Start voice chat as host");
+        }
     }
 
     public void StartClient()
     {
-        StartManager(false);
+        if (StartManager(false))
+        {
+            Debug.Log("Start voice chat as client");
+        }
     }
 
     public void Stop()
     {
         if (!hasStarted_) return;
 
-        uNetVoice_.StopVoice();
+        uNetVoice_.StopVoiceChat();
 
         var manager = GetComponent<NetworkManager>();
         if (isHost_)
@@ -73,6 +86,8 @@ public class TestNetworkController : MonoBehaviour
         }
 
         hasStarted_ = false;
+
+        Debug.Log("Stop");
     }
 }
 
