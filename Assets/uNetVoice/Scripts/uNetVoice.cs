@@ -159,7 +159,7 @@ public class uNetVoice : MonoBehaviour
     {
         var conn = msg.conn;
         var voice = msg.ReadMessage<VoiceData>();
-        player.Add(conn, voice);
+        player.Add(conn.address, voice);
     }
 }
 
