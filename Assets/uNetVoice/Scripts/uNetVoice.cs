@@ -53,13 +53,18 @@ public class uNetVoice : MonoBehaviour
 
     void Update()
     {
-        if (recorder && recorder.isRecording)
+        UpdateSendingRecordedData();
+    }
+
+    void UpdateSendingRecordedData()
+    {
+        if (recorder == null || !recorder.isRecording) return;
+        if (client == null || !client.isConnected) return;
+
+        while (recorder.GetRecordedData(ref buffer_) > 0)
         {
-            while (recorder.GetRecordedData(ref buffer_) > 0)
-            {
-                var voice = new VoiceData() { data = buffer_ };
-                client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
-            }
+            var voice = new VoiceData() { data = buffer_ };
+            client.SendByChannel(VoiceMessage.ClientToHost, voice, channelId);
         }
     }
 
