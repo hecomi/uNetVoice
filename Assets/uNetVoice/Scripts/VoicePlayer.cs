@@ -37,6 +37,8 @@ public class VoicePlayer : MonoBehaviour
 
     void OnAudioFilterRead(float[] data, int channels)
     {
+        System.Array.Clear(data, 0, data.Length);
+
         foreach (var kv in buffers_)
         {
             var conn = kv.Key;
