@@ -8,9 +8,7 @@ namespace uNetVoice
 [RequireComponent(typeof(AudioSource))]
 public class VoicePlayer : MonoBehaviour
 {
-    Dictionary<NetworkConnection, VoiceBuffer> buffers_ 
-        = new Dictionary<NetworkConnection, VoiceBuffer>();
-
+    Dictionary<string, VoiceBuffer> buffers_ = new Dictionary<string, VoiceBuffer>();
     float[] tmpBuffer_ = null;
 
     void Awake()
@@ -21,15 +19,15 @@ public class VoicePlayer : MonoBehaviour
         source.Play();
     }
 
-    public void Add(NetworkConnection conn, VoiceData voice)
+    public void Add(string id, VoiceData voice)
     {
         VoiceBuffer buffer = null;
-        buffers_.TryGetValue(conn, out buffer);
+        buffers_.TryGetValue(id, out buffer);
 
         if (buffer == null)
         {
             buffer = new VoiceBuffer();
-            buffers_.Add(conn, buffer);
+            buffers_.Add(id, buffer);
         }
 
         buffer.Add(voice.data);
@@ -41,7 +39,6 @@ public class VoicePlayer : MonoBehaviour
 
         foreach (var kv in buffers_)
         {
-            var conn = kv.Key;
             var buffer = kv.Value;
 
             if (tmpBuffer_ == null)
